@@ -1,0 +1,3 @@
+server_logs/
+*.log
+.env
