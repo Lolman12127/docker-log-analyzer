@@ -36,7 +36,7 @@ jobs:
 
       - name: Verify data insertion in PostgreSQL
         run: |
-          ROWS=$(docker compose exec -T db psql -U postgres -d logs_db -t -c "SELECT COUNT(*) FROM critical_errors;" | xras || echo "0")
+          ROWS=$(docker compose exec -T db psql -U postgres -d logs_db -t -c "SELECT COUNT(*) FROM critical_errors;" | xargs)
           echo "Found $ROWS critical error logs in database."
           if [ "$ROWS" -ge 2 ]; then
             echo "SUCCESS: Log analyzer successfully processed and saved errors to PostgreSQL!"
