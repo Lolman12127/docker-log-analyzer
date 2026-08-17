@@ -13,7 +13,7 @@ jobs:
     steps:
       # step 1: משכת הקוד מ-GitHub לשרת ה-CI
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # step 2: בדיקת תקינות התחביר של קובץ ה-docker-compose.yml
       - name: Validate Docker Compose Config
@@ -28,5 +28,23 @@ jobs:
         run: docker compose ps
 
       # step 5: ניקוי הסביבה בסיום
+      - name: Bring down containers
+        run: docker compose down -v
+
+      # Step 6: בדיקה אוטומטית ישירה בתוך PostgreSQL (Integration Test)
+      - name: Verify data insertion in PostgreSQL
+        run: |
+          ROWS=$(docker compose exec -T db psql -U postgres -d logs_db -t -c "SELECT COUNT(*) FROM critical_errors;")
+          echo "Found $ROWS critical error logs in database."
+
+          # בדיקה שאכן נשמרו לפחות שתי שורות שגיאה
+          if [ "$ROWS" -ge 2 ]; then
+            echo "SUCCESS: Log analyzer successfully processed and saved errors to PostgreSQL!"
+          else
+            echo "ERROR: Expected at least 2 log entries in DB, but found $ROWS"
+            exit 1
+          fi
+
+      # Step 7: ניקוי הסביבה בסיום
       - name: Bring down containers
         run: docker compose down -v
