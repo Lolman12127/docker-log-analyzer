@@ -20,24 +20,37 @@ jobs:
       - name: Build and start containers
         run: docker compose up -d --build
 
-      # בודק שה-DB באמת רץ ומוכן לקבל חיבורים לפני שממשיכים
-      - name: Wait for PostgreSQL to be ready
+      - name: Wait for PostgreSQL readiness
         run: |
           until docker compose exec -T db pg_isready -U postgres; do
-            echo "Waiting for postgres..."
+            echo "Waiting for PostgreSQL..."
             sleep 2
           done
 
-      - name: Wait for Python script execution
-        run: sleep 5
+      - name: Print container logs for debugging
+        run: docker compose logs
 
-      - name: Check running containers
-        run: docker compose ps
-
-      - name: Verify data insertion in PostgreSQL
+      - name: Verify data insertion in PostgreSQL (Retry loop)
         run: |
-          ROWS=$(docker compose exec -T db psql -U postgres -d logs_db -t -c "SELECT COUNT(*) FROM critical_errors;" | xargs)
+          MAX_RETRIES=15
+          COUNT=0
+          ROWS=0
+
+          until [ "$ROWS" -ge 2 ] || [ "$COUNT" -eq "$MAX_RETRIES" ]; do
+            echo "Attempt $((COUNT+1))/$MAX_RETRIES: Checking database records..."
+            ROWS=$(docker compose exec -T db psql -U postgres -d logs_db -t -c "SELECT COUNT(*) FROM critical_errors;" 2>/dev/null | xargs || echo "0")
+
+            # אם המשתנה ריק, הגדר אותו כ-0
+            if [ -z "$ROWS" ]; then ROWS=0; fi
+
+            if [ "$ROWS" -lt 2 ]; then
+              sleep 3
+            fi
+            COUNT=$((COUNT+1))
+          done
+
           echo "Found $ROWS critical error logs in database."
+
           if [ "$ROWS" -ge 2 ]; then
             echo "SUCCESS: Log analyzer successfully processed and saved errors to PostgreSQL!"
           else
