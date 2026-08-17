@@ -1,0 +1,32 @@
+name: Docker Compose CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # step 1: משכת הקוד מ-GitHub לשרת ה-CI
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # step 2: בדיקת תקינות התחביר של קובץ ה-docker-compose.yml
+      - name: Validate Docker Compose Config
+        run: docker compose config
+
+      # step 3: בנייה והרצה של הסביבה ברקע
+      - name: Build and start containers
+        run: docker compose up -d --build
+
+      # step 4: בדיקה שהקונטיינרים רצים בהצלחה
+      - name: Check running containers
+        run: docker compose ps
+
+      # step 5: ניקוי הסביבה בסיום
+      - name: Bring down containers
+        run: docker compose down -v
