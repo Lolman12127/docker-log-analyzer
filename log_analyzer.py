@@ -60,9 +60,11 @@ for filename in os.listdir(folder_name):
                         (filename, line.strip())
                     )
                     inserted_count += 1
+                if "INFO" in line:
+                    info_count += 1
 
 conn.commit()
 print(f"✓ Inserted {inserted_count} error logs into PostgreSQL database!")
-
+print(f"There's {info_count} lines of info")
 cursor.close()
 conn.close()
