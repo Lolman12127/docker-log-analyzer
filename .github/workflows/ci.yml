@@ -11,33 +11,33 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # step 1: משכת הקוד מ-GitHub לשרת ה-CI
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
-      # step 2: בדיקת תקינות התחביר של קובץ ה-docker-compose.yml
       - name: Validate Docker Compose Config
         run: docker compose config
 
-      # step 3: בנייה והרצה של הסביבה ברקע
       - name: Build and start containers
         run: docker compose up -d --build
 
-      # step 4: בדיקה שהקונטיינרים רצים בהצלחה
+      # בודק שה-DB באמת רץ ומוכן לקבל חיבורים לפני שממשיכים
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          until docker compose exec -T db pg_isready -U postgres; do
+            echo "Waiting for postgres..."
+            sleep 2
+          done
+
+      - name: Wait for Python script execution
+        run: sleep 5
+
       - name: Check running containers
         run: docker compose ps
 
-      # step 5: ניקוי הסביבה בסיום
-      - name: Bring down containers
-        run: docker compose down -v
-
-      # Step 6: בדיקה אוטומטית ישירה בתוך PostgreSQL (Integration Test)
       - name: Verify data insertion in PostgreSQL
         run: |
-          ROWS=$(docker compose exec -T db psql -U postgres -d logs_db -t -c "SELECT COUNT(*) FROM critical_errors;")
+          ROWS=$(docker compose exec -T db psql -U postgres -d logs_db -t -c "SELECT COUNT(*) FROM critical_errors;" | xras || echo "0")
           echo "Found $ROWS critical error logs in database."
-
-          # בדיקה שאכן נשמרו לפחות שתי שורות שגיאה
           if [ "$ROWS" -ge 2 ]; then
             echo "SUCCESS: Log analyzer successfully processed and saved errors to PostgreSQL!"
           else
@@ -45,6 +45,5 @@ jobs:
             exit 1
           fi
 
-      # Step 7: ניקוי הסביבה בסיום
       - name: Bring down containers
         run: docker compose down -v
