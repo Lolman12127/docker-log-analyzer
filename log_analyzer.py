@@ -1,70 +1,76 @@
 import os
-import time
+import glob
 import psycopg2
 
-# 1. קריאת הגדרות ההתחברות (שם המארח 'db' הוא שם ה-Service ב-Docker Compose)
+# 1. קריאת משתני סביבה מ-docker-compose
 DB_HOST = os.getenv("DB_HOST", "db")
 DB_NAME = os.getenv("DB_NAME", "logs_db")
 DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASS = os.getenv("DB_PASS", "secret123")
 
-# 2. מנגנון Retry להמתנה עד שבסיס הנתונים יעלה ויקבל חיבורים
-conn = None
-for _ in range(10):
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASS
-        )
-        print("✓ Connected to PostgreSQL successfully!")
-        break
-    except psycopg2.OperationalError:
-        print("Waiting for database to be ready...")
-        time.sleep(2)
+def main():
+    # 2. התחברות ל-PostgreSQL
+    print("Connecting to PostgreSQL...")
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        database=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS
+    )
+    cursor = conn.cursor()
 
-if not conn:
-    raise Exception("Could not connect to database.")
+    # 3. יצירת הטבלה במידה ולא קיימת
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS critical_errors (
+            id SERIAL PRIMARY KEY,
+            filename VARCHAR(255),
+            log_line TEXT
+        );
+    """)
+    conn.commit()
 
-cursor = conn.cursor()
+    # 4. סריקת כל קבצי ה-log בתיקייה server_logs (או בתיקייה הנוכחית)
+    log_files = glob.glob("server_logs/*.log") + glob.glob("*.log")
+    
+    if not log_files:
+        print("No log files found.")
+        return
 
-# 3. יצירת טבלה במידה ולא קיימת
-cursor.execute("""
-    CREATE TABLE IF NOT EXISTS critical_errors (
-        id SERIAL PRIMARY KEY,
-        filename VARCHAR(255),
-        log_line TEXT
-    );
-""")
-conn.commit()
+    for file_path in log_files:
+        filename = os.path.basename(file_path)
+        info_count = 0
 
-# 4. יצירת התיקייה וקבצי ה-Log לדוגמה
-folder_name = "server_logs"
-os.makedirs(folder_name, exist_ok=True)
-sample_files = {
-    "app.log": "2026-08-10 ERROR Database connection timeout.\n2026-08-10 INFO System healthy.\n",
-    "error.log": "2026-08-11 ERROR Disk limit exceeded.\n"
-}
-for filename, content in sample_files.items():
-    with open(os.path.join(folder_name, filename), "w", encoding="utf-8") as f:
-        f.write(content)
-
-# 5. ניתוח והכנסה לבסיס הנתונים
-inserted_count = 0
-for filename in os.listdir(folder_name):
-    if filename.endswith(".log"):
-        file_path = os.path.join(folder_name, filename)
-        with open(file_path, "r", encoding="utf-8") as in_f:
-            for line in in_f:
-                if "ERROR" in line:
+        print(f"Processing file: {filename}")
+        
+        with open(file_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line_str = line.strip()
+                
+                # בדיקת שורות ERROR והכנסתן ל-DB
+                if "ERROR" in line_str:
                     cursor.execute(
                         "INSERT INTO critical_errors (filename, log_line) VALUES (%s, %s);",
-                        (filename, line.strip())
+                        (filename, line_str)
                     )
-                    inserted_count += 1
-                if "INFO" in line:
+                
+                # ספירת שורות INFO
+                if "INFO" in line_str:
                     info_count += 1
 
-conn.commit()
-print(f"✓ Inserted {inserted_count} error logs into PostgreSQL database!")
-print(f"There's {info_count} lines of info")
-cursor.close()
-conn.close()
+        # הכנסת סיכום שורות ה-INFO ל-DB עבור הקובץ הנוכחי
+        info_summary_line = f"The number of INFO lines are: {info_count}"
+        cursor.execute(
+            "INSERT INTO critical_errors (filename, log_line) VALUES (%s, %s);",
+            (filename, info_summary_line)
+        )
+
+        # ביצוע COMMIT קריטי לשמירת השינויים ב-Database!
+        conn.commit()
+        print(f"Finished {filename}: Saved ERRORs and INFO summary ({info_summary_line}).")
+
+    cursor.close()
+    conn.close()
+    print("Log analysis complete successfully!")
+
+if __name__ == "__main__":
+    main()
