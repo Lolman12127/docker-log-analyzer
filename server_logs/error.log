@@ -1,0 +1,16 @@
+2026-02-10 13:45:12 INFO Service initialization started.
+2026-02-10 13:45:15 INFO Connected to database logs_db at host db:5432.
+2026-02-10 13:50:02 DEBUG Memory usage: 142MB / 1024MB.
+2026-02-10 14:00:00 ERROR Unauthorized access attempt from IP 192.168.1.104.
+2026-02-10 14:01:15 ERROR Failed to authenticate user 'admin_test': Invalid credentials.
+2026-02-10 14:02:30 WARN High latency detected on API endpoint /api/v1/checkout (850ms).
+2026-02-10 14:05:00 INFO Security scan finished. 0 critical vulnerabilities found.
+2026-02-10 14:10:22 ERROR Database connection timeout after 30000ms.
+2026-02-10 14:10:25 WARN Reconnecting to PostgreSQL instance (attempt 1/5)...
+2026-02-10 14:10:27 INFO Successfully reconnected to database logs_db.
+2026-02-10 14:15:40 ERROR Disk limit exceeded on volume /var/lib/postgresql/data (98% full).
+2026-02-10 14:18:05 ERROR SSL handshake failed for client 10.0.4.12: Certificate expired.
+2026-02-10 14:22:11 DEBUG Garbage collection completed in 14ms.
+2026-02-10 14:25:33 ERROR Out of Memory (OOM): Process 'python_log_analyzer' killed.
+2026-02-10 14:26:00 INFO Container 'python_log_analyzer' restarted automatically by Docker.
+2026-02-10 14:30:00 INFO Daily scheduled log rotation completed.

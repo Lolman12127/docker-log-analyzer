@@ -1,0 +1,12 @@
+2026-08-17 10:11:05 INFO Queue worker #1 started listening on 'orders_queue'.
+2026-08-17 10:12:40 DEBUG Processing job #4091: Sending email confirmation.
+2026-08-17 10:14:18 ERROR SMTP Error: Host 'smtp.mailservice.internal' port 587 unreachable.
+2026-08-17 10:15:02 WARN Message queue backup: 450 items pending in 'orders_queue'.
+2026-08-17 10:18:22 ERROR ElasticSearch Index Failure: Bulk insert rejected due to high CPU load.
+2026-08-17 10:20:00 ERROR Out of Disk Space: Inode exhaustion on /var/log.
+2026-08-17 10:22:15 INFO Auto-scaling triggered: Provisioning 2 additional worker instances.
+2026-08-17 10:25:31 ERROR Failed to acquire Redis lock 'order_lock_10928': Lock timeout.
+2026-08-17 10:30:11 WARN Certificate wildcard renewal due in 7 days.
+2026-08-17 10:32:44 ERROR DNS resolution failed for external API 'api.stripe.com'.
+2026-08-17 10:35:10 ERROR Microservice 'inventory-svc' returned HTTP 503 Service Unavailable.
+2026-08-17 10:40:00 INFO Self-healing probe completed: Service 'inventory-svc' recovered.
