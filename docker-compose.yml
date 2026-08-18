@@ -1,4 +1,7 @@
+version: '3.8'
+
 services:
+  # Service 1: PostgreSQL Database
   db:
     image: postgres:15-alpine
     container_name: postgres_db
@@ -6,19 +9,32 @@ services:
       POSTGRES_DB: logs_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: secret123
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d logs_db"]
+      interval: 3s
+      timeout: 5s
+      retries: 5
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  # Service 2: Python Log Analyzer
   app:
     build: .
     container_name: python_log_analyzer
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       DB_HOST: db
       DB_NAME: logs_db
       DB_USER: postgres
       DB_PASS: secret123
+      LOGS_DIR: /app/server_logs
+    volumes:
+      # Mounts your local server_logs folder into the container (read-only)
+      - ./server_logs:/app/server_logs:ro
 
 volumes:
   pgdata:
